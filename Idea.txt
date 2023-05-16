@@ -1,0 +1,11 @@
+Go static analyser to catch issues with returning errors from `defer`, like:
+
+func fn() error { // Return signature should be `(err error)`
+	var err error // Should use variable declared in signature
+
+	defer func() {
+		err = errors.New("defer error")
+	}()
+
+	return nil // Does not return `err`
+}
