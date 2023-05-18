@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -87,7 +88,42 @@ func run(pass *analysis.Pass) (interface{}, error) {
 								}
 
 								fmt.Printf("assignStmt: %#v\n", assignStmt)
-								fmt.Printf("token: %d\n", token.DEFINE)
+
+								// TODO: Get type of Lhs, check if "error"
+								// If "error", then ensure error return is declared in signature
+
+								for _, variable := range assignStmt.Lhs {
+									ident, ok := variable.(*ast.Ident)
+									if !ok {
+										continue
+									}
+
+									obj := pass.TypesInfo.Defs[ident]
+
+									valueSpec, ok := ident.Obj.Decl.(*ast.ValueSpec)
+									if !ok {
+										continue
+									}
+
+									fmt.Printf("variable: %#v\n", ident)
+									fmt.Printf("variable.obj: %#v\n", ident.Obj)
+									fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
+									fmt.Printf("variable.obj.valuespec: %#v\n", valueSpec)
+									fmt.Printf("variable.obj.valuespec.type: %#v\n", valueSpec.Type)
+									fmt.Printf("obj: %#v\n", obj)
+
+									t := pass.TypesInfo.Types[variable]
+									fmt.Printf("type: %#v\n", t)
+									fmt.Printf("type.type: %#v\n", t.Type)
+
+									named, ok := t.Type.(*types.Named)
+									if !ok {
+										continue
+									}
+
+									fmt.Printf("type.type.obj: %#v\n", named.Obj())
+									fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
+								}
 
 								return true
 							},
