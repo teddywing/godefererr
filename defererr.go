@@ -24,17 +24,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		ast.Inspect(
 			file,
 			func(node ast.Node) bool {
-				funcType, ok := node.(*ast.FuncType)
+				funcDecl, ok := node.(*ast.FuncDecl)
 				if !ok {
 					return true
 				}
 
-				if funcType.Results == nil {
+				if funcDecl.Type.Results == nil {
 					return true
 				}
 
 				funcReturnsError := false
-				for _, returnVal := range funcType.Results.List {
+				for _, returnVal := range funcDecl.Type.Results.List {
 					fmt.Printf("returnVal: %#v\n", returnVal.Type)
 
 					returnIdent, ok := returnVal.Type.(*ast.Ident)
@@ -56,9 +56,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 
 				ast.Inspect(
-					funcType,
+					funcDecl.Body,
 					func(node ast.Node) bool {
-						fmt.Printf("node: %#v\n", node)
+						// fmt.Printf("node: %#v\n", node)
 						deferStmt, ok := node.(*ast.DeferStmt)
 						if !ok {
 							return true
