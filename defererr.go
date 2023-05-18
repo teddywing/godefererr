@@ -4,6 +4,7 @@ package defererr
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -39,7 +40,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 					returnIdent, ok := returnVal.Type.(*ast.Ident)
 					if !ok {
-					return true
+						return true
 					}
 
 					if returnIdent.Name == "error" {
@@ -67,6 +68,30 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						fmt.Printf("defer: %#v\n", deferStmt)
 
 						// TODO: Find out if defer uses assigns an error variable without declaring it
+
+						funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
+						if !ok {
+							return true
+						}
+
+						ast.Inspect(
+							funcLit.Body,
+							func(node ast.Node) bool {
+								assignStmt, ok := node.(*ast.AssignStmt)
+								if !ok {
+									return true
+								}
+
+								if assignStmt.Tok == token.DEFINE {
+									return true
+								}
+
+								fmt.Printf("assignStmt: %#v\n", assignStmt)
+								fmt.Printf("token: %d\n", token.DEFINE)
+
+								return true
+							},
+						)
 
 						return true
 					},
