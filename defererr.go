@@ -92,6 +92,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 								// TODO: Get type of Lhs, check if "error"
 								// If "error", then ensure error return is declared in signature
 
+								deferAssignsError := false
 								for _, variable := range assignStmt.Lhs {
 									ident, ok := variable.(*ast.Ident)
 									if !ok {
@@ -123,7 +124,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 									fmt.Printf("type.type.obj: %#v\n", named.Obj())
 									fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
+
+									if named.Obj().Name() == "error" {
+										deferAssignsError = true
+									}
 								}
+
+								if !deferAssignsError {
+									return true
+								}
+
+								// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
 
 								return true
 							},
