@@ -23,103 +23,107 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	// Is err variable returned after closure?
 
 	for _, file := range pass.Files {
-		ast.Inspect(
-			file,
-			func(node ast.Node) bool {
-				funcDecl, ok := node.(*ast.FuncDecl)
+		checkFunctions(pass, file)
+	}
+
+	return nil, nil
+}
+
+func checkFunctions(pass *analysis.Pass, node ast.Node) {
+	ast.Inspect(
+		node,
+		func(node ast.Node) bool {
+			funcDecl, ok := node.(*ast.FuncDecl)
+			if !ok {
+				return true
+			}
+
+			if funcDecl.Type.Results == nil {
+				return true
+			}
+
+			funcReturnsError := false
+			errorReturnIndex := -1
+			for i, returnVal := range funcDecl.Type.Results.List {
+				fmt.Printf("returnVal Type: %#v\n", returnVal.Type)
+
+				returnIdent, ok := returnVal.Type.(*ast.Ident)
 				if !ok {
 					return true
 				}
 
-				if funcDecl.Type.Results == nil {
-					return true
+				if returnIdent.Name == "error" {
+					funcReturnsError = true
+					errorReturnIndex = i
 				}
+			}
 
-				funcReturnsError := false
-				errorReturnIndex := -1
-				for i, returnVal := range funcDecl.Type.Results.List {
-					fmt.Printf("returnVal Type: %#v\n", returnVal.Type)
+			// Can we do the same for non-error types?
+			// for _, returnVal := range funcType.Results.List {
+			// }
 
-					returnIdent, ok := returnVal.Type.(*ast.Ident)
+			if !funcReturnsError || errorReturnIndex == -1 {
+				return true
+			}
+
+			if len(funcDecl.Type.Results.List[errorReturnIndex].Names) > 0 {
+				fmt.Printf("return error var name: %#v\n", funcDecl.Type.Results.List[errorReturnIndex].Names[0])
+			}
+			errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
+
+			ast.Inspect(
+				funcDecl.Body,
+				func(node ast.Node) bool {
+					// fmt.Printf("node: %#v\n", node)
+					deferStmt, ok := node.(*ast.DeferStmt)
 					if !ok {
 						return true
 					}
 
-					if returnIdent.Name == "error" {
-						funcReturnsError = true
-						errorReturnIndex = i
-					}
-				}
+					fmt.Printf("defer: %#v\n", deferStmt)
 
-				// Can we do the same for non-error types?
-				// for _, returnVal := range funcType.Results.List {
-				// }
+					// TODO: Find out if defer uses assigns an error variable without declaring it
 
-				if !funcReturnsError || errorReturnIndex == -1 {
-					return true
-				}
-
-				if len(funcDecl.Type.Results.List[errorReturnIndex].Names) > 0 {
-					fmt.Printf("return error var name: %#v\n", funcDecl.Type.Results.List[errorReturnIndex].Names[0])
-				}
-				errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
-
-				ast.Inspect(
-					funcDecl.Body,
-					func(node ast.Node) bool {
-						// fmt.Printf("node: %#v\n", node)
-						deferStmt, ok := node.(*ast.DeferStmt)
-						if !ok {
-							return true
-						}
-
-						fmt.Printf("defer: %#v\n", deferStmt)
-
-						// TODO: Find out if defer uses assigns an error variable without declaring it
-
-						funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
-						if !ok {
-							return true
-						}
-
-						// TODO: funcall
-						checkErrorAssignedInDefer(pass, funcLit, errorReturnField)
-
+					funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
+					if !ok {
 						return true
-					},
-				)
+					}
 
-				// // Look for a function literal after the `defer` statement.
-				// funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
-				// if !ok {
-				// 	return true
-				// }
-				//
-				// funcScope := pass.TypesInfo.Scopes[funcLit.Type]
-				//
-				// // Try to find the function where the defer is defined. Note, defer can be defined in an inner block.
-				// funcType, ok := funcScope.Parent().(*ast.FuncType)
-				// if !ok {
-				// 	return true
-				// }
-				// fmt.Printf("func: %#v\n", funcType)
-				//
-				// if funcLit.Type.Results == nil {
-				// 	return true
-				// }
-				//
-				// for _, returnVal := range funcLit.Type.Results.List {
-				// 	fmt.Printf("returnVal: %#v\n", returnVal)
-				// }
+					// TODO: funcall
+					checkErrorAssignedInDefer(pass, funcLit, errorReturnField)
 
-				fmt.Println()
+					return true
+				},
+			)
 
-				return true
-			},
-		)
-	}
+			// // Look for a function literal after the `defer` statement.
+			// funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
+			// if !ok {
+			// 	return true
+			// }
+			//
+			// funcScope := pass.TypesInfo.Scopes[funcLit.Type]
+			//
+			// // Try to find the function where the defer is defined. Note, defer can be defined in an inner block.
+			// funcType, ok := funcScope.Parent().(*ast.FuncType)
+			// if !ok {
+			// 	return true
+			// }
+			// fmt.Printf("func: %#v\n", funcType)
+			//
+			// if funcLit.Type.Results == nil {
+			// 	return true
+			// }
+			//
+			// for _, returnVal := range funcLit.Type.Results.List {
+			// 	fmt.Printf("returnVal: %#v\n", returnVal)
+			// }
 
-	return nil, nil
+			fmt.Println()
+
+			return true
+		},
+	)
 }
 
 // TODO: doc
