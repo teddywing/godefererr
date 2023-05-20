@@ -71,6 +71,7 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			}
 			errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
 
+			// TODO: Move to checkDeferFunc()
 			ast.Inspect(
 				funcDecl.Body,
 				func(node ast.Node) bool {
