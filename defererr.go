@@ -62,6 +62,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				if len(funcDecl.Type.Results.List[errorReturnIndex].Names) > 0 {
 					fmt.Printf("return error var name: %#v\n", funcDecl.Type.Results.List[errorReturnIndex].Names[0])
 				}
+				errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
 
 				ast.Inspect(
 					funcDecl.Body,
@@ -133,6 +134,25 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 									if named.Obj().Name() == "error" {
 										deferAssignsError = true
+
+										isErrorNameInReturnSignature := false
+
+										for _, errorReturnIdent := range errorReturnField.Names {
+											if ident.Name == errorReturnIdent.Name {
+												// Report if no matches
+												isErrorNameInReturnSignature = true
+											}
+										}
+
+										if !isErrorNameInReturnSignature {
+											pass.Reportf(
+												errorReturnField.Pos(),
+												"return signature should be '(err error)'", // TODO: Use name from ident.Name
+												// errorReturnField,
+											)
+
+											break
+										}
 									}
 								}
 
@@ -141,6 +161,23 @@ func run(pass *analysis.Pass) (interface{}, error) {
 								}
 
 								// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
+
+								// isErrorNameInReturnSignature := false
+								//
+								// for _, errorReturnIdent := range errorReturnField.Names {
+								// 	if ident.Name == errorReturnIdent.Name {
+								// 		// Report if no matches
+								// 		isErrorNameInReturnSignature = true
+								// 	}
+								// }
+								//
+								// if !isErrorNameInReturnSignature {
+								// 	pass.Reportf(
+								// 		errorReturnField.Pos(),
+								// 		"return signature should be '(err error)' (TODO)",
+								// 		errorReturnField,
+								// 	)
+								// }
 
 								return true
 							},

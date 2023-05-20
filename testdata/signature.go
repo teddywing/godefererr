@@ -2,7 +2,7 @@ package main
 
 import "errors"
 
-func shouldDeclareErrInSignature() error { // want "return signature should be '(err error)'"
+func shouldDeclareErrInSignature() error { // want "return signature should be '\\(err error\\)'"
 	var err error // Should use variable declared in signature
 
 	err = nil
