@@ -37,7 +37,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 				funcReturnsError := false
 				for _, returnVal := range funcDecl.Type.Results.List {
-					fmt.Printf("returnVal: %#v\n", returnVal.Type)
+					fmt.Printf("returnVal: %#v\n", returnVal)
+					for _, ident := range returnVal.Names {
+						fmt.Printf("returnVal name: %#v\n", ident)
+					}
+
+					fmt.Printf("returnVal Type: %#v\n", returnVal.Type)
 
 					returnIdent, ok := returnVal.Type.(*ast.Ident)
 					if !ok {
@@ -166,6 +171,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				// for _, returnVal := range funcLit.Type.Results.List {
 				// 	fmt.Printf("returnVal: %#v\n", returnVal)
 				// }
+
+				fmt.Println()
 
 				return true
 			},
