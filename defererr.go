@@ -185,9 +185,7 @@ func checkErrorAssignedInDefer(
 
 				// TODO: Was error lhs declared in defer closure? Then it
 				// should be ignored.
-				if deferFuncLit.Body.Lbrace < valueSpec.Pos() &&
-					valueSpec.Pos() < deferFuncLit.Body.Rbrace {
-
+				if isVariableDeclaredInsideDeferClosure(deferFuncLit, valueSpec) {
 					continue
 				}
 
@@ -243,4 +241,13 @@ func checkErrorAssignedInDefer(
 			return true
 		},
 	)
+}
+
+// TODO: doc
+func isVariableDeclaredInsideDeferClosure(
+	deferFuncLit *ast.FuncLit,
+	variableDecl *ast.ValueSpec,
+) bool {
+	return deferFuncLit.Body.Lbrace < variableDecl.Pos() &&
+		variableDecl.Pos() < deferFuncLit.Body.Rbrace
 }
