@@ -144,6 +144,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 											}
 										}
 
+										// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
+
 										if !isErrorNameInReturnSignature {
 											pass.Reportf(
 												errorReturnField.Pos(),
