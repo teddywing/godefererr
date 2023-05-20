@@ -183,6 +183,14 @@ func checkErrorAssignedInDefer(
 				fmt.Printf("type.type.obj: %#v\n", named.Obj())
 				fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
 
+				// TODO: Was error lhs declared in defer closure? Then it
+				// should be ignored.
+				if deferFuncLit.Body.Lbrace < valueSpec.Pos() &&
+					valueSpec.Pos() < deferFuncLit.Body.Rbrace {
+
+					continue
+				}
+
 				if named.Obj().Name() == "error" {
 					deferAssignsError = true
 
