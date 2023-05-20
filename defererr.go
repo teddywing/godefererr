@@ -36,12 +36,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 
 				funcReturnsError := false
-				for _, returnVal := range funcDecl.Type.Results.List {
-					fmt.Printf("returnVal: %#v\n", returnVal)
-					for _, ident := range returnVal.Names {
-						fmt.Printf("returnVal name: %#v\n", ident)
-					}
-
+				errorReturnIndex := -1
+				for i, returnVal := range funcDecl.Type.Results.List {
 					fmt.Printf("returnVal Type: %#v\n", returnVal.Type)
 
 					returnIdent, ok := returnVal.Type.(*ast.Ident)
@@ -51,6 +47,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 					if returnIdent.Name == "error" {
 						funcReturnsError = true
+						errorReturnIndex = i
 					}
 				}
 
@@ -58,8 +55,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				// for _, returnVal := range funcType.Results.List {
 				// }
 
-				if !funcReturnsError {
+				if !funcReturnsError || errorReturnIndex == -1 {
 					return true
+				}
+
+				if len(funcDecl.Type.Results.List[errorReturnIndex].Names) > 0 {
+					fmt.Printf("return error var name: %#v\n", funcDecl.Type.Results.List[errorReturnIndex].Names[0])
 				}
 
 				ast.Inspect(
