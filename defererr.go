@@ -212,6 +212,8 @@ func checkErrorAssignedInDefer(
 
 						break
 					}
+
+					// TODO: Check `return`s in rest of function to find out whether this error name is included
 				}
 			}
 
