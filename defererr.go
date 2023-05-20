@@ -82,108 +82,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 							return true
 						}
 
-						ast.Inspect(
-							funcLit.Body,
-							func(node ast.Node) bool {
-								assignStmt, ok := node.(*ast.AssignStmt)
-								if !ok {
-									return true
-								}
-
-								if assignStmt.Tok == token.DEFINE {
-									return true
-								}
-
-								fmt.Printf("assignStmt: %#v\n", assignStmt)
-
-								// TODO: Get type of Lhs, check if "error"
-								// If "error", then ensure error return is declared in signature
-
-								deferAssignsError := false
-								for _, variable := range assignStmt.Lhs {
-									ident, ok := variable.(*ast.Ident)
-									if !ok {
-										continue
-									}
-
-									obj := pass.TypesInfo.Defs[ident]
-
-									valueSpec, ok := ident.Obj.Decl.(*ast.ValueSpec)
-									if !ok {
-										continue
-									}
-
-									fmt.Printf("variable: %#v\n", ident)
-									fmt.Printf("variable.obj: %#v\n", ident.Obj)
-									fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
-									fmt.Printf("variable.obj.valuespec: %#v\n", valueSpec)
-									fmt.Printf("variable.obj.valuespec.type: %#v\n", valueSpec.Type)
-									fmt.Printf("obj: %#v\n", obj)
-
-									t := pass.TypesInfo.Types[variable]
-									fmt.Printf("type: %#v\n", t)
-									fmt.Printf("type.type: %#v\n", t.Type)
-
-									named, ok := t.Type.(*types.Named)
-									if !ok {
-										continue
-									}
-
-									fmt.Printf("type.type.obj: %#v\n", named.Obj())
-									fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
-
-									if named.Obj().Name() == "error" {
-										deferAssignsError = true
-
-										isErrorNameInReturnSignature := false
-
-										for _, errorReturnIdent := range errorReturnField.Names {
-											if ident.Name == errorReturnIdent.Name {
-												// Report if no matches
-												isErrorNameInReturnSignature = true
-											}
-										}
-
-										// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
-
-										if !isErrorNameInReturnSignature {
-											pass.Reportf(
-												errorReturnField.Pos(),
-												"return signature should be '(err error)'", // TODO: Use name from ident.Name
-												// errorReturnField,
-											)
-
-											break
-										}
-									}
-								}
-
-								if !deferAssignsError {
-									return true
-								}
-
-								// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
-
-								// isErrorNameInReturnSignature := false
-								//
-								// for _, errorReturnIdent := range errorReturnField.Names {
-								// 	if ident.Name == errorReturnIdent.Name {
-								// 		// Report if no matches
-								// 		isErrorNameInReturnSignature = true
-								// 	}
-								// }
-								//
-								// if !isErrorNameInReturnSignature {
-								// 	pass.Reportf(
-								// 		errorReturnField.Pos(),
-								// 		"return signature should be '(err error)' (TODO)",
-								// 		errorReturnField,
-								// 	)
-								// }
-
-								return true
-							},
-						)
+						// TODO: funcall
+						checkErrorAssignedInDefer(pass, funcLit, errorReturnField)
 
 						return true
 					},
@@ -220,4 +120,114 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+// TODO: doc
+func checkErrorAssignedInDefer(
+	pass *analysis.Pass,
+	deferFuncLit *ast.FuncLit,
+	errorReturnField *ast.Field,
+) {
+	ast.Inspect(
+		deferFuncLit.Body,
+		func(node ast.Node) bool {
+			assignStmt, ok := node.(*ast.AssignStmt)
+			if !ok {
+				return true
+			}
+
+			if assignStmt.Tok == token.DEFINE {
+				return true
+			}
+
+			fmt.Printf("assignStmt: %#v\n", assignStmt)
+
+			// TODO: Get type of Lhs, check if "error"
+			// If "error", then ensure error return is declared in signature
+
+			deferAssignsError := false
+			for _, variable := range assignStmt.Lhs {
+				ident, ok := variable.(*ast.Ident)
+				if !ok {
+					continue
+				}
+
+				obj := pass.TypesInfo.Defs[ident]
+
+				valueSpec, ok := ident.Obj.Decl.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+
+				fmt.Printf("variable: %#v\n", ident)
+				fmt.Printf("variable.obj: %#v\n", ident.Obj)
+				fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
+				fmt.Printf("variable.obj.valuespec: %#v\n", valueSpec)
+				fmt.Printf("variable.obj.valuespec.type: %#v\n", valueSpec.Type)
+				fmt.Printf("obj: %#v\n", obj)
+
+				t := pass.TypesInfo.Types[variable]
+				fmt.Printf("type: %#v\n", t)
+				fmt.Printf("type.type: %#v\n", t.Type)
+
+				named, ok := t.Type.(*types.Named)
+				if !ok {
+					continue
+				}
+
+				fmt.Printf("type.type.obj: %#v\n", named.Obj())
+				fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
+
+				if named.Obj().Name() == "error" {
+					deferAssignsError = true
+
+					isErrorNameInReturnSignature := false
+
+					for _, errorReturnIdent := range errorReturnField.Names {
+						if ident.Name == errorReturnIdent.Name {
+							// Report if no matches
+							isErrorNameInReturnSignature = true
+						}
+					}
+
+					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
+
+					if !isErrorNameInReturnSignature {
+						pass.Reportf(
+							errorReturnField.Pos(),
+							"return signature should be '(err error)'", // TODO: Use name from ident.Name
+							// errorReturnField,
+						)
+
+						break
+					}
+				}
+			}
+
+			if !deferAssignsError {
+				return true
+			}
+
+			// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
+
+			// isErrorNameInReturnSignature := false
+			//
+			// for _, errorReturnIdent := range errorReturnField.Names {
+			// 	if ident.Name == errorReturnIdent.Name {
+			// 		// Report if no matches
+			// 		isErrorNameInReturnSignature = true
+			// 	}
+			// }
+			//
+			// if !isErrorNameInReturnSignature {
+			// 	pass.Reportf(
+			// 		errorReturnField.Pos(),
+			// 		"return signature should be '(err error)' (TODO)",
+			// 		errorReturnField,
+			// 	)
+			// }
+
+			return true
+		},
+	)
 }
