@@ -247,101 +247,86 @@ func checkErrorAssignedInDefer(
 	ast.Inspect(
 		deferFuncLit.Body,
 		func(node ast.Node) bool {
+			// Look for error assignments in the defer closure.
 			assignStmt, ok := node.(*ast.AssignStmt)
 			if !ok {
 				return true
 			}
 
+			// Ensure the assignment is not `:=`, or `token.DEFINE`. We only
+			// want to look for issues if the closure sets an error variable
+			// declared outside its scope.
 			if assignStmt.Tok == token.DEFINE {
 				return true
 			}
 
-			fmt.Printf("assignStmt: %#v\n", assignStmt)
-
-			// TODO: Get type of Lhs, check if "error"
-			// If "error", then ensure error return is declared in signature
-
+			// This sentinel tracks whether we've seen an assignment to an
+			// error variable in this node in the closure.
 			deferAssignsError := false
-			for _, variable := range assignStmt.Lhs {
-				ident, ok := variable.(*ast.Ident)
+
+			for _, lhsExpr := range assignStmt.Lhs {
+				lhsIdent, ok := lhsExpr.(*ast.Ident)
 				if !ok {
 					continue
 				}
 
-				// TODO: Figure out why doesDeclareErrInSignature doesn't
-				// continue past here.
-				fmt.Printf("variable: %#v\n", ident)
-				fmt.Printf("variable.obj: %#v\n", ident.Obj)
-				fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
-				fmt.Printf("variable.obj.decl: %#v\n", ident.Obj.Decl)
-
-				obj := pass.TypesInfo.Defs[ident]
-				fmt.Printf("obj: %#v\n", obj)
-
-				if ident.Obj.Decl == nil {
+				if lhsIdent.Obj.Decl == nil {
 					continue
 				}
 
-				var variableDecl ast.Node = ident.Obj.Decl.(ast.Node)
-				// variableDecl, ok := ident.Obj.Decl.(*ast.DeclStmt)
-				// if !ok {
-				// 	fmt.Println("NOK")
-				// 	continue
-				// }
+				// Get the lhs variable's declaration so we can find out
+				// whether it was declared in the closure using a `token.VAR`
+				// declaration.
+				var lhsIdentDecl ast.Node = lhsIdent.Obj.Decl.(ast.Node)
 
-				fmt.Printf("variable.obj.valuespec: %#v\n", variableDecl)
-				fmt.Printf("variable.obj.valuespec.type: %#v\n", variableDecl)
+				// If this lhs was declared inside the defer closure, it should
+				// be ignored, as it doesn't set data in the parent scope.
+				if isVariableDeclaredInsideDeferClosure(deferFuncLit, lhsIdentDecl) {
+					continue
+				}
 
-				t := pass.TypesInfo.Types[variable]
-				fmt.Printf("type: %#v\n", t)
-				fmt.Printf("type.type: %#v\n", t.Type)
-
-				named, ok := t.Type.(*types.Named)
+				// Get the type of the lhs.
+				lhsNamedType, ok := pass.TypesInfo.Types[lhsExpr].Type.(*types.Named)
 				if !ok {
 					continue
 				}
 
-				fmt.Printf("type.type.obj: %#v\n", named.Obj())
-				fmt.Printf("type.type.obj: %#v\n", named.Obj().Name())
-
-				// TODO: Was error lhs declared in defer closure? Then it
-				// should be ignored.
-				if isVariableDeclaredInsideDeferClosure(deferFuncLit, variableDecl) {
+				// We only care about lhs with an `error` type.
+				if lhsNamedType.Obj().Name() != "error" {
 					continue
 				}
 
-				if named.Obj().Name() == "error" {
-					deferAssignsError = true
+				deferAssignsError = true
 
-					isErrorNameInReturnSignature := false
+				// Store `lhsIdent` so we can reference its name when reporting
+				// issues with subsequent `return` statements.
+				fState.deferErrorVar = lhsIdent
 
-					// TODO: Use the var name in return statement checks.
-					for _, errorReturnIdent := range errorReturnField.Names {
-						if ident.Name == errorReturnIdent.Name {
-							// Report if no matches
-							isErrorNameInReturnSignature = true
-						}
+				// Check whether the lhs variable name is the same as one of
+				// the error variables declared in the function's return
+				// signature.
+				isErrorNameInReturnSignature := false
+				for _, errorReturnIdent := range errorReturnField.Names {
+					if lhsIdent.Name == errorReturnIdent.Name {
+						isErrorNameInReturnSignature = true
 					}
+				}
 
-					// fmt.Printf("named: %#v\n", named)
-					// if len(errorReturnField.Names) > 0 {
-					// 	fState.deferErrorVar = errorReturnField.Names[0]
-					// }
-					fState.deferErrorVar = ident
+				// If the variable name doesn't match any declared in the
+				// function's return signature, report a diagnostic on the
+				// return signature, requiring the error variable to be
+				// declared with the error variable name used in the closure
+				// assignment.
+				if !isErrorNameInReturnSignature {
+					pass.Reportf(
+						errorReturnField.Pos(),
+						// TODO: Get the actual signature and set the error
+						// name in front of the error type.
+						"return signature should be '(%s error)'",
+						lhsIdent,
+					)
 
-					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
-
-					if !isErrorNameInReturnSignature {
-						pass.Reportf(
-							errorReturnField.Pos(),
-							"return signature should be '(%s error)'", // TODO: Use name from ident.Name
-							ident,
-						)
-
-						break
-					}
-
-					// TODO: Check `return`s in rest of function to find out whether this error name is included
+					break
 				}
 			}
 
@@ -349,26 +334,12 @@ func checkErrorAssignedInDefer(
 				return true
 			}
 
+			// Store the position of the end of the `defer` closure. We will
+			// only verify `return` statements occurring after this position.
+			//
+			// Do this only if the `defer` closure contained an error
+			// assignment.
 			fState.setFirstErrorDeferEndPos(deferFuncLit.Body.Rbrace)
-
-			// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
-
-			// isErrorNameInReturnSignature := false
-			//
-			// for _, errorReturnIdent := range errorReturnField.Names {
-			// 	if ident.Name == errorReturnIdent.Name {
-			// 		// Report if no matches
-			// 		isErrorNameInReturnSignature = true
-			// 	}
-			// }
-			//
-			// if !isErrorNameInReturnSignature {
-			// 	pass.Reportf(
-			// 		errorReturnField.Pos(),
-			// 		"return signature should be '(err error)' (TODO)",
-			// 		errorReturnField,
-			// 	)
-			// }
 
 			return true
 		},
