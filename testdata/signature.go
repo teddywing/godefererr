@@ -29,3 +29,16 @@ func doesDeclareErrInSignature() (err error) {
 
 	return nil // want "does not return 'err'"
 }
+
+func good() (err error) {
+	err = nil
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = errors.New("defer error")
+	}()
+
+	return err
+}

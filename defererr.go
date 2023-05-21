@@ -176,6 +176,21 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 					// TODO: Get returnStmt.Results[error index from function result signature]
 					// If not variable and name not [error variable name from defer], report diagnostic
+					returnError := returnStmt.Results[errorReturnIndex]
+					t := pass.TypesInfo.Types[returnError]
+					fmt.Printf("returnStmt value type: %#v\n", t)
+					fmt.Printf("returnStmt type type: %#v\n", t.Type)
+
+					// TODO: Require t.Type to be *types.Named
+					_, ok = t.Type.(*types.Named)
+					if !ok {
+						// TODO: report
+						return true
+					}
+
+					fmt.Printf("returnError: %#v\n", returnError)
+					if returnError.Name == x {
+					}
 
 					return true
 				},
@@ -266,6 +281,7 @@ func checkErrorAssignedInDefer(
 
 					isErrorNameInReturnSignature := false
 
+					// TODO: Use the var name in return statement checks.
 					for _, errorReturnIdent := range errorReturnField.Names {
 						if ident.Name == errorReturnIdent.Name {
 							// Report if no matches
