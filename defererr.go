@@ -2,8 +2,10 @@
 package defererr
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/printer"
 	"go/token"
 	"go/types"
 
@@ -55,6 +57,13 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			if !ok {
 				return true
 			}
+
+			var buf bytes.Buffer
+			err := printer.Fprint(&buf, pass.Fset, funcDecl)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(buf.String())
 
 			if funcDecl.Type.Results == nil {
 				return true
