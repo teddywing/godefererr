@@ -334,8 +334,8 @@ func checkErrorAssignedInDefer(
 					if !isErrorNameInReturnSignature {
 						pass.Reportf(
 							errorReturnField.Pos(),
-							"return signature should be '(err error)'", // TODO: Use name from ident.Name
-							// errorReturnField,
+							"return signature should be '(%s error)'", // TODO: Use name from ident.Name
+							ident,
 						)
 
 						break

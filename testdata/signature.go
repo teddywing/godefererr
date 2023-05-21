@@ -45,6 +45,21 @@ func returnedErrorMustMatchDeferErrorName() (err error) {
 	return err2 // want "does not return 'err'"
 }
 
+func deferUsesUnconventionalErrName() error { // want "return signature should be '\\(anErr error\\)'"
+	var anErr error
+
+	anErr = nil
+	if anErr != nil {
+		return anErr
+	}
+
+	defer func() {
+		anErr = errors.New("defer error")
+	}()
+
+	return anErr
+}
+
 func good() (err error) {
 	err = nil
 	if err != nil {
