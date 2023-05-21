@@ -71,6 +71,15 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			}
 			errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
 
+			// Idea: Set this to the end token.Pos of the first `defer`
+			// closure. Look for `return`s after that in funcDecl.Body and
+			// ensure they include the error variable.
+			firstDeferEndPos := -1
+
+			// Is it possible to generalise this to other types, and look for
+			// anything set in `defer` with the same type as a result in the
+			// return signature?
+
 			// TODO: Move to checkDeferFunc()
 			// Should we make this an ast.Visitor to store some state for `return` checking?
 			ast.Inspect(
