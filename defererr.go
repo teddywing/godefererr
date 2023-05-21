@@ -182,20 +182,27 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 					fmt.Printf("returnStmt value type: %#v\n", t)
 					fmt.Printf("returnStmt type type: %#v\n", t.Type)
 
+					returnErrorIdent, ok := returnErrorExpr.(*ast.Ident)
+					if !ok {
+						return true
+					}
+
 					// TODO: Require t.Type to be *types.Named
 					_, ok = t.Type.(*types.Named)
 					if !ok {
 						// TODO: report
+
+						pass.Reportf(
+							returnErrorIdent.Pos(),
+							"does not return '%s'",
+							fState.deferErrorVar,
+						)
+
 						return true
 					}
 
 					// Or, we want to compare with the error declared in the function signature.
 					fmt.Printf("returnError: %#v\n", returnErrorExpr)
-
-					returnErrorIdent, ok := returnErrorExpr.(*ast.Ident)
-					if !ok {
-						return true
-					}
 
 					if returnErrorIdent.Name == fState.deferErrorVar.Name {
 						fmt.Printf(
@@ -316,9 +323,11 @@ func checkErrorAssignedInDefer(
 						}
 					}
 
-					if len(errorReturnField.Names) > 0 {
-						fState.deferErrorVar = errorReturnField.Names[0]
-					}
+					// fmt.Printf("named: %#v\n", named)
+					// if len(errorReturnField.Names) > 0 {
+					// 	fState.deferErrorVar = errorReturnField.Names[0]
+					// }
+					fState.deferErrorVar = ident
 
 					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
 
