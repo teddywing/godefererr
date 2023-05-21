@@ -72,6 +72,7 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
 
 			// TODO: Move to checkDeferFunc()
+			// Should we make this an ast.Visitor to store some state for `return` checking?
 			ast.Inspect(
 				funcDecl.Body,
 				func(node ast.Node) bool {
