@@ -29,6 +29,24 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
+type functionState struct {
+	firstErrorDeferEndPos token.Pos
+}
+
+func newFunctionState() *functionState {
+	return &functionState{
+		firstErrorDeferEndPos: -1,
+	}
+}
+
+func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
+	if s.firstErrorDeferEndPos != -1 {
+		return
+	}
+
+	s.firstErrorDeferEndPos = pos
+}
+
 func checkFunctions(pass *analysis.Pass, node ast.Node) {
 	ast.Inspect(
 		node,
@@ -74,7 +92,9 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			// Idea: Set this to the end token.Pos of the first `defer`
 			// closure. Look for `return`s after that in funcDecl.Body and
 			// ensure they include the error variable.
-			firstErrorDeferEndPos := -1
+			// firstErrorDeferEndPos := -1
+
+			fState := newFunctionState()
 
 			// Is it possible to generalise this to other types, and look for
 			// anything set in `defer` with the same type as a result in the
@@ -101,11 +121,13 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 					}
 
 					// TODO: funcall
-					checkErrorAssignedInDefer(pass, funcLit, errorReturnField)
+					checkErrorAssignedInDefer(pass, funcLit, errorReturnField, fState)
 
 					return true
 				},
 			)
+
+			fmt.Printf("fState: %#v\n", fState)
 
 			// // Look for a function literal after the `defer` statement.
 			// funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
@@ -142,6 +164,7 @@ func checkErrorAssignedInDefer(
 	pass *analysis.Pass,
 	deferFuncLit *ast.FuncLit,
 	errorReturnField *ast.Field,
+	fState *functionState,
 ) {
 	ast.Inspect(
 		deferFuncLit.Body,
@@ -210,6 +233,8 @@ func checkErrorAssignedInDefer(
 							isErrorNameInReturnSignature = true
 						}
 					}
+
+					fState.setFirstErrorDeferEndPos(deferFuncLit.Body.Rbrace)
 
 					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
 
