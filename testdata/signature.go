@@ -30,7 +30,7 @@ func doesDeclareErrInSignature() (err error) {
 	return nil // want "does not return 'err'"
 }
 
-func returnsOtherVariable() (err error) {
+func returnedErrorMustMatchDeferErrorName() (err error) {
 	err = nil
 	if err != nil {
 		return err
