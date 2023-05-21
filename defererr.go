@@ -159,6 +159,20 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 					}
 
 					// TODO: Check whether returnStmt uses error variable.
+					fmt.Printf("returnStmt: %#v\n", returnStmt)
+
+					if returnStmt.Results == nil {
+						return true
+					}
+
+					fmt.Printf("returnStmt.Results: %#v\n", returnStmt.Results)
+
+					for _, expr := range returnStmt.Results {
+						fmt.Printf("returnStmt expr: %#v\n", expr)
+					}
+
+					// TODO: Get returnStmt.Results[error index from function result signature]
+					// If not variable and name not [error variable name from defer], report diagnostic
 
 					return true
 				},
