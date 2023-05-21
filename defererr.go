@@ -33,6 +33,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 type functionState struct {
 	firstErrorDeferEndPos token.Pos
+	deferErrorVar         *ast.Ident
 }
 
 func newFunctionState() *functionState {
@@ -176,8 +177,8 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 					// TODO: Get returnStmt.Results[error index from function result signature]
 					// If not variable and name not [error variable name from defer], report diagnostic
-					returnError := returnStmt.Results[errorReturnIndex]
-					t := pass.TypesInfo.Types[returnError]
+					returnErrorExpr := returnStmt.Results[errorReturnIndex]
+					t := pass.TypesInfo.Types[returnErrorExpr]
 					fmt.Printf("returnStmt value type: %#v\n", t)
 					fmt.Printf("returnStmt type type: %#v\n", t.Type)
 
@@ -188,8 +189,34 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 						return true
 					}
 
-					fmt.Printf("returnError: %#v\n", returnError)
-					if returnError.Name == x {
+					// Or, we want to compare with the error declared in the function signature.
+					fmt.Printf("returnError: %#v\n", returnErrorExpr)
+
+					returnErrorIdent, ok := returnErrorExpr.(*ast.Ident)
+					if !ok {
+						return true
+					}
+
+					if returnErrorIdent.Name == fState.deferErrorVar.Name {
+						fmt.Printf(
+							"names: return:%#v : defer:%#v\n",
+							returnErrorIdent.Name,
+							fState.deferErrorVar.Name,
+						)
+					}
+
+					if returnErrorIdent.Name != fState.deferErrorVar.Name {
+						fmt.Printf(
+							"names: return:%#v : defer:%#v\n",
+							returnErrorIdent.Name,
+							fState.deferErrorVar.Name,
+						)
+
+						pass.Reportf(
+							returnErrorIdent.Pos(),
+							"does not return '%s'",
+							fState.deferErrorVar,
+						)
 					}
 
 					return true
@@ -287,6 +314,10 @@ func checkErrorAssignedInDefer(
 							// Report if no matches
 							isErrorNameInReturnSignature = true
 						}
+					}
+
+					if len(errorReturnField.Names) > 0 {
+						fState.deferErrorVar = errorReturnField.Names[0]
 					}
 
 					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.

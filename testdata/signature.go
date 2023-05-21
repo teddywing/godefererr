@@ -30,6 +30,21 @@ func doesDeclareErrInSignature() (err error) {
 	return nil // want "does not return 'err'"
 }
 
+func returnsOtherVariable() (err error) {
+	err = nil
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = errors.New("defer error")
+	}()
+
+	err2 := errors.New("returned error")
+
+	return err2 // want "does not return 'err'"
+}
+
 func good() (err error) {
 	err = nil
 	if err != nil {
