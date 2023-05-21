@@ -209,13 +209,19 @@ func checkErrorAssignedInDefer(
 				obj := pass.TypesInfo.Defs[ident]
 				fmt.Printf("obj: %#v\n", obj)
 
-				valueSpec, ok := ident.Obj.Decl.(*ast.ValueSpec)
-				if !ok {
+				if ident.Obj.Decl == nil {
 					continue
 				}
 
-				fmt.Printf("variable.obj.valuespec: %#v\n", valueSpec)
-				fmt.Printf("variable.obj.valuespec.type: %#v\n", valueSpec.Type)
+				var variableDecl ast.Node = ident.Obj.Decl.(ast.Node)
+				// variableDecl, ok := ident.Obj.Decl.(*ast.DeclStmt)
+				// if !ok {
+				// 	fmt.Println("NOK")
+				// 	continue
+				// }
+
+				fmt.Printf("variable.obj.valuespec: %#v\n", variableDecl)
+				fmt.Printf("variable.obj.valuespec.type: %#v\n", variableDecl)
 
 				t := pass.TypesInfo.Types[variable]
 				fmt.Printf("type: %#v\n", t)
@@ -231,7 +237,7 @@ func checkErrorAssignedInDefer(
 
 				// TODO: Was error lhs declared in defer closure? Then it
 				// should be ignored.
-				if isVariableDeclaredInsideDeferClosure(deferFuncLit, valueSpec) {
+				if isVariableDeclaredInsideDeferClosure(deferFuncLit, variableDecl) {
 					continue
 				}
 
@@ -296,7 +302,7 @@ func checkErrorAssignedInDefer(
 // TODO: doc
 func isVariableDeclaredInsideDeferClosure(
 	deferFuncLit *ast.FuncLit,
-	variableDecl *ast.ValueSpec,
+	variableDecl ast.Node,
 ) bool {
 	return deferFuncLit.Body.Lbrace < variableDecl.Pos() &&
 		variableDecl.Pos() < deferFuncLit.Body.Rbrace
