@@ -169,6 +169,9 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 					for _, expr := range returnStmt.Results {
 						fmt.Printf("returnStmt expr: %#v\n", expr)
+
+						t := pass.TypesInfo.Types[expr]
+						fmt.Printf("returnStmt expr type: %#v\n", t)
 					}
 
 					// TODO: Get returnStmt.Results[error index from function result signature]
