@@ -199,19 +199,23 @@ func checkErrorAssignedInDefer(
 					continue
 				}
 
+				// TODO: Figure out why doesDeclareErrInSignature doesn't
+				// continue past here.
+				fmt.Printf("variable: %#v\n", ident)
+				fmt.Printf("variable.obj: %#v\n", ident.Obj)
+				fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
+				fmt.Printf("variable.obj.decl: %#v\n", ident.Obj.Decl)
+
 				obj := pass.TypesInfo.Defs[ident]
+				fmt.Printf("obj: %#v\n", obj)
 
 				valueSpec, ok := ident.Obj.Decl.(*ast.ValueSpec)
 				if !ok {
 					continue
 				}
 
-				fmt.Printf("variable: %#v\n", ident)
-				fmt.Printf("variable.obj: %#v\n", ident.Obj)
-				fmt.Printf("variable.obj.type: %#v\n", ident.Obj.Type)
 				fmt.Printf("variable.obj.valuespec: %#v\n", valueSpec)
 				fmt.Printf("variable.obj.valuespec.type: %#v\n", valueSpec.Type)
-				fmt.Printf("obj: %#v\n", obj)
 
 				t := pass.TypesInfo.Types[variable]
 				fmt.Printf("type: %#v\n", t)
@@ -243,8 +247,6 @@ func checkErrorAssignedInDefer(
 						}
 					}
 
-					fState.setFirstErrorDeferEndPos(deferFuncLit.Body.Rbrace)
-
 					// Maybe don't report the error if it was declared in the closure using a GenDecl? -> We already don't. Should test for these things.
 
 					if !isErrorNameInReturnSignature {
@@ -264,6 +266,8 @@ func checkErrorAssignedInDefer(
 			if !deferAssignsError {
 				return true
 			}
+
+			fState.setFirstErrorDeferEndPos(deferFuncLit.Body.Rbrace)
 
 			// TODO: Check that funcDecl declares error in signature (check before ast.Inspect on function body, report here)
 
