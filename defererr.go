@@ -49,6 +49,10 @@ func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
 	s.firstErrorDeferEndPos = pos
 }
 
+func (s *functionState) isfirstErrorDeferEndPosSet() bool {
+	return s.firstErrorDeferEndPos == -1
+}
+
 func checkFunctions(pass *analysis.Pass, node ast.Node) {
 	ast.Inspect(
 		node,
@@ -138,28 +142,27 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 			fmt.Printf("fState: %#v\n", fState)
 
-			// // Look for a function literal after the `defer` statement.
-			// funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
-			// if !ok {
-			// 	return true
-			// }
-			//
-			// funcScope := pass.TypesInfo.Scopes[funcLit.Type]
-			//
-			// // Try to find the function where the defer is defined. Note, defer can be defined in an inner block.
-			// funcType, ok := funcScope.Parent().(*ast.FuncType)
-			// if !ok {
-			// 	return true
-			// }
-			// fmt.Printf("func: %#v\n", funcType)
-			//
-			// if funcLit.Type.Results == nil {
-			// 	return true
-			// }
-			//
-			// for _, returnVal := range funcLit.Type.Results.List {
-			// 	fmt.Printf("returnVal: %#v\n", returnVal)
-			// }
+			if fState.isfirstErrorDeferEndPosSet() {
+				return true
+			}
+
+			ast.Inspect(
+				funcDecl.Body,
+				func(node ast.Node) bool {
+					returnStmt, ok := node.(*ast.ReturnStmt)
+					if !ok {
+						return true
+					}
+
+					if returnStmt.Pos() <= fState.firstErrorDeferEndPos {
+						return true
+					}
+
+					// TODO: Check whether returnStmt uses error variable.
+
+					return true
+				},
+			)
 
 			fmt.Println()
 
