@@ -60,6 +60,8 @@ func deferUsesUnconventionalErrName() error { // want "return signature should b
 	return anErr
 }
 
+// TODO: This is starting to look like needless complexity. Maybe we just
+// report that the error variable must be declared in the signature instead.
 func multipleReturnValuesString() (string, error) { // want "return signature should be '\\(string1 string, err error\\)'"
 	var err error = nil
 	if err != nil {
