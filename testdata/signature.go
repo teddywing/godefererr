@@ -60,6 +60,34 @@ func deferUsesUnconventionalErrName() error { // want "return signature should b
 	return anErr
 }
 
+func multipleReturnValuesString() (string, error) { // want "return signature should be '\\(string1 string, err error\\)'"
+	var err error = nil
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		err = errors.New("defer error")
+	}()
+
+	return "ret", err
+}
+
+type AStruct struct {}
+
+func multipleReturnValuesStruct() (*AStruct, error) { // want "return signature should be '\\(aStruct1 *AStruct, err error\\)'"
+	var err error = nil
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = errors.New("defer error")
+	}()
+
+	return &AStruct{}, err
+}
+
 func good() (err error) {
 	err = nil
 	if err != nil {
