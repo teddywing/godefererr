@@ -147,90 +147,100 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 				return true
 			}
 
-			ast.Inspect(
-				funcDecl.Body,
-				func(node ast.Node) bool {
-					returnStmt, ok := node.(*ast.ReturnStmt)
-					if !ok {
-						return true
-					}
-
-					if returnStmt.Pos() <= fState.firstErrorDeferEndPos {
-						return true
-					}
-
-					// TODO: Check whether returnStmt uses error variable.
-					fmt.Printf("returnStmt: %#v\n", returnStmt)
-
-					if returnStmt.Results == nil {
-						return true
-					}
-
-					fmt.Printf("returnStmt.Results: %#v\n", returnStmt.Results)
-
-					for _, expr := range returnStmt.Results {
-						fmt.Printf("returnStmt expr: %#v\n", expr)
-
-						t := pass.TypesInfo.Types[expr]
-						fmt.Printf("returnStmt expr type: %#v\n", t)
-					}
-
-					// TODO: Get returnStmt.Results[error index from function result signature]
-					// If not variable and name not [error variable name from defer], report diagnostic
-					returnErrorExpr := returnStmt.Results[errorReturnIndex]
-					t := pass.TypesInfo.Types[returnErrorExpr]
-					fmt.Printf("returnStmt value type: %#v\n", t)
-					fmt.Printf("returnStmt type type: %#v\n", t.Type)
-
-					returnErrorIdent, ok := returnErrorExpr.(*ast.Ident)
-					if !ok {
-						return true
-					}
-
-					// TODO: Require t.Type to be *types.Named
-					_, ok = t.Type.(*types.Named)
-					if !ok {
-						// TODO: report
-
-						pass.Reportf(
-							returnErrorIdent.Pos(),
-							"does not return '%s'",
-							fState.deferErrorVar,
-						)
-
-						return true
-					}
-
-					// Or, we want to compare with the error declared in the function signature.
-					fmt.Printf("returnError: %#v\n", returnErrorExpr)
-
-					if returnErrorIdent.Name == fState.deferErrorVar.Name {
-						fmt.Printf(
-							"names: return:%#v : defer:%#v\n",
-							returnErrorIdent.Name,
-							fState.deferErrorVar.Name,
-						)
-					}
-
-					if returnErrorIdent.Name != fState.deferErrorVar.Name {
-						fmt.Printf(
-							"names: return:%#v : defer:%#v\n",
-							returnErrorIdent.Name,
-							fState.deferErrorVar.Name,
-						)
-
-						pass.Reportf(
-							returnErrorIdent.Pos(),
-							"does not return '%s'",
-							fState.deferErrorVar,
-						)
-					}
-
-					return true
-				},
-			)
+			checkFunctionReturns(pass, funcDecl.Body, errorReturnIndex, fState)
 
 			fmt.Println()
+
+			return true
+		},
+	)
+}
+
+// TODO: doc
+func checkFunctionReturns(
+	pass *analysis.Pass,
+	funcBody *ast.BlockStmt,
+	errorReturnIndex int,
+	fState *functionState,
+) {
+	ast.Inspect(
+		funcBody,
+		func(node ast.Node) bool {
+			returnStmt, ok := node.(*ast.ReturnStmt)
+			if !ok {
+				return true
+			}
+
+			if returnStmt.Pos() <= fState.firstErrorDeferEndPos {
+				return true
+			}
+
+			// TODO: Check whether returnStmt uses error variable.
+			fmt.Printf("returnStmt: %#v\n", returnStmt)
+
+			if returnStmt.Results == nil {
+				return true
+			}
+
+			fmt.Printf("returnStmt.Results: %#v\n", returnStmt.Results)
+
+			for _, expr := range returnStmt.Results {
+				fmt.Printf("returnStmt expr: %#v\n", expr)
+
+				t := pass.TypesInfo.Types[expr]
+				fmt.Printf("returnStmt expr type: %#v\n", t)
+			}
+
+			// TODO: Get returnStmt.Results[error index from function result signature]
+			// If not variable and name not [error variable name from defer], report diagnostic
+			returnErrorExpr := returnStmt.Results[errorReturnIndex]
+			t := pass.TypesInfo.Types[returnErrorExpr]
+			fmt.Printf("returnStmt value type: %#v\n", t)
+			fmt.Printf("returnStmt type type: %#v\n", t.Type)
+
+			returnErrorIdent, ok := returnErrorExpr.(*ast.Ident)
+			if !ok {
+				return true
+			}
+
+			// TODO: Require t.Type to be *types.Named
+			_, ok = t.Type.(*types.Named)
+			if !ok {
+				// TODO: report
+
+				pass.Reportf(
+					returnErrorIdent.Pos(),
+					"does not return '%s'",
+					fState.deferErrorVar,
+				)
+
+				return true
+			}
+
+			// Or, we want to compare with the error declared in the function signature.
+			fmt.Printf("returnError: %#v\n", returnErrorExpr)
+
+			if returnErrorIdent.Name == fState.deferErrorVar.Name {
+				fmt.Printf(
+					"names: return:%#v : defer:%#v\n",
+					returnErrorIdent.Name,
+					fState.deferErrorVar.Name,
+				)
+			}
+
+			if returnErrorIdent.Name != fState.deferErrorVar.Name {
+				fmt.Printf(
+					"names: return:%#v : defer:%#v\n",
+					returnErrorIdent.Name,
+					fState.deferErrorVar.Name,
+				)
+
+				pass.Reportf(
+					returnErrorIdent.Pos(),
+					"does not return '%s'",
+					fState.deferErrorVar,
+				)
+			}
 
 			return true
 		},
