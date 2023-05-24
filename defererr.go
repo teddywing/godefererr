@@ -50,7 +50,7 @@ func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
 	s.firstErrorDeferEndPos = pos
 }
 
-func (s *functionState) isfirstErrorDeferEndPosSet() bool {
+func (s *functionState) isFirstErrorDeferEndPosSet() bool {
 	return s.firstErrorDeferEndPos != -1
 }
 
@@ -143,7 +143,7 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 			fmt.Printf("fState: %#v\n", fState)
 
-			if !fState.isfirstErrorDeferEndPosSet() {
+			if !fState.isFirstErrorDeferEndPosSet() {
 				return true
 			}
 
