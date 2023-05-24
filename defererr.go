@@ -50,8 +50,8 @@ func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
 	s.firstErrorDeferEndPos = pos
 }
 
-func (s *functionState) isFirstErrorDeferEndPosSet() bool {
-	return s.firstErrorDeferEndPos != -1
+func (s *functionState) deferAssignsError() bool {
+	return s.deferErrorVar != nil
 }
 
 func checkFunctions(pass *analysis.Pass, node ast.Node) {
@@ -143,7 +143,9 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 			fmt.Printf("fState: %#v\n", fState)
 
-			if !fState.isFirstErrorDeferEndPosSet() {
+			// Stop if the `defer` closure does not assign to an error
+			// variable.
+			if !fState.deferAssignsError() {
 				return true
 			}
 
