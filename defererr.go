@@ -81,6 +81,9 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			for i, returnVal := range funcDecl.Type.Results.List {
 				returnIdent, ok := returnVal.Type.(*ast.Ident)
 				if !ok {
+					// TODO: Do we need to `return true` here? Does this check
+					// mean that variables are not declared in the return
+					// signature?
 					continue
 				}
 
