@@ -2,10 +2,8 @@
 package defererr
 
 import (
-	"bytes"
 	"fmt"
 	"go/ast"
-	"go/printer"
 	"go/token"
 	"go/types"
 
@@ -58,55 +56,47 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 	ast.Inspect(
 		node,
 		func(node ast.Node) bool {
+			// Begin by looking at each declared function.
 			funcDecl, ok := node.(*ast.FuncDecl)
 			if !ok {
 				return true
 			}
 
-			var buf bytes.Buffer
-			err := printer.Fprint(&buf, pass.Fset, funcDecl)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(buf.String())
+			// var buf bytes.Buffer
+			// err := printer.Fprint(&buf, pass.Fset, funcDecl)
+			// if err != nil {
+			// 	panic(err)
+			// }
+			// fmt.Println(buf.String())
 
+			// Since we only care about functions that return errors, ignore
+			// those that don't have return values.
 			if funcDecl.Type.Results == nil {
 				return true
 			}
 
-			funcReturnsError := false
+			// Look for a return value that has an `error` type. Store the
+			// index of the last one.
 			errorReturnIndex := -1
 			for i, returnVal := range funcDecl.Type.Results.List {
-				fmt.Printf("returnVal Type: %#v\n", returnVal.Type)
-
 				returnIdent, ok := returnVal.Type.(*ast.Ident)
 				if !ok {
-					return true
+					continue
 				}
 
 				if returnIdent.Name == "error" {
-					funcReturnsError = true
 					errorReturnIndex = i
 				}
 			}
 
-			// Can we do the same for non-error types?
-			// for _, returnVal := range funcType.Results.List {
-			// }
-
-			if !funcReturnsError || errorReturnIndex == -1 {
+			// If the function doesn't return an error, ignore the function.
+			if errorReturnIndex == -1 {
 				return true
 			}
 
-			if len(funcDecl.Type.Results.List[errorReturnIndex].Names) > 0 {
-				fmt.Printf("return error var name: %#v\n", funcDecl.Type.Results.List[errorReturnIndex].Names[0])
-			}
+			// Get the error return field in case we need to report a problem
+			// with error declaration.
 			errorReturnField := funcDecl.Type.Results.List[errorReturnIndex]
-
-			// Idea: Set this to the end token.Pos of the first `defer`
-			// closure. Look for `return`s after that in funcDecl.Body and
-			// ensure they include the error variable.
-			// firstErrorDeferEndPos := -1
 
 			fState := newFunctionState()
 
@@ -150,8 +140,6 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			}
 
 			checkFunctionReturns(pass, funcDecl.Body, errorReturnIndex, fState)
-
-			fmt.Println()
 
 			return true
 		},
