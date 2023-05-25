@@ -3,7 +3,10 @@ package main
 import "errors"
 
 func shouldDeclareErrInSignature() error { // want "return signature should use named error parameter err"
-	var err error // Should use variable declared in signature
+	// Should use variable declared in signature. We don't need to report this
+	// as if the variable is declared in the signature, a redeclaration causes
+	// a compile error.
+	var err error
 
 	err = nil
 	if err != nil {
