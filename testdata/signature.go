@@ -102,3 +102,7 @@ func good() (err error) {
 
 	return err
 }
+
+func noErrorInReturn() string {
+	return "test"
+}
