@@ -16,10 +16,11 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	// TODO: Find defer closure
-	// Does it set error defined in outer scope?
-	// Does outer scope declare error variable in signature?
-	// Is err variable returned after closure?
+	// Look at each function and check if it returns an error.
+	// If so, look for a defer inside the function.
+	// If a captured error variable is defined in the defer's closure, ensure
+	// that the variable is declared in the function's signature, and that any
+	// returns after the defer closure use the assigned error variable.
 
 	for _, file := range pass.Files {
 		checkFunctions(pass, file)
