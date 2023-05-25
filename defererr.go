@@ -36,7 +36,7 @@ type functionState struct {
 	firstErrorDeferEndPos token.Pos
 
 	// Error variable assigned in defer.
-	deferErrorVar         *ast.Ident
+	deferErrorVar *ast.Ident
 }
 
 // newFunctionState initialises a new functionState.
