@@ -33,8 +33,8 @@ type functionState struct {
 	deferErrorVar         *ast.Ident
 }
 
-func newFunctionState() *functionState {
-	return &functionState{
+func newFunctionState() functionState {
+	return functionState{
 		firstErrorDeferEndPos: -1,
 	}
 }
@@ -103,7 +103,7 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 				pass,
 				funcDecl.Body,
 				errorReturnField,
-				fState,
+				&fState,
 			)
 
 			// Stop if the `defer` closure does not assign to an error
@@ -112,7 +112,12 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 				return true
 			}
 
-			checkFunctionReturns(pass, funcDecl.Body, errorReturnIndex, fState)
+			checkFunctionReturns(
+				pass,
+				funcDecl.Body,
+				errorReturnIndex,
+				&fState,
+			)
 
 			return true
 		},
