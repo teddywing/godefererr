@@ -2,7 +2,6 @@
 package defererr
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -100,38 +99,12 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 
 			fState := newFunctionState()
 
-			// Is it possible to generalise this to other types, and look for
-			// anything set in `defer` with the same type as a result in the
-			// return signature?
-
-			// TODO: Move to checkDeferFunc()
-			// Should we make this an ast.Visitor to store some state for `return` checking?
-			ast.Inspect(
+			checkFunctionBody(
+				pass,
 				funcDecl.Body,
-				func(node ast.Node) bool {
-					// fmt.Printf("node: %#v\n", node)
-					deferStmt, ok := node.(*ast.DeferStmt)
-					if !ok {
-						return true
-					}
-
-					fmt.Printf("defer: %#v\n", deferStmt)
-
-					// TODO: Find out if defer uses assigns an error variable without declaring it
-
-					funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
-					if !ok {
-						return true
-					}
-
-					// TODO: funcall
-					checkErrorAssignedInDefer(pass, funcLit, errorReturnField, fState)
-
-					return true
-				},
+				errorReturnField,
+				fState,
 			)
-
-			fmt.Printf("fState: %#v\n", fState)
 
 			// Stop if the `defer` closure does not assign to an error
 			// variable.
@@ -140,6 +113,34 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 			}
 
 			checkFunctionReturns(pass, funcDecl.Body, errorReturnIndex, fState)
+
+			return true
+		},
+	)
+}
+
+// TODO: doc
+func checkFunctionBody(
+	pass *analysis.Pass,
+	funcBody *ast.BlockStmt,
+	errorReturnField *ast.Field,
+	fState *functionState,
+) {
+	ast.Inspect(
+		funcBody,
+		func(node ast.Node) bool {
+			deferStmt, ok := node.(*ast.DeferStmt)
+			if !ok {
+				return true
+			}
+
+			// Get a function closure run by `defer`.
+			funcLit, ok := deferStmt.Call.Fun.(*ast.FuncLit)
+			if !ok {
+				return true
+			}
+
+			checkErrorAssignedInDefer(pass, funcLit, errorReturnField, fState)
 
 			return true
 		},
