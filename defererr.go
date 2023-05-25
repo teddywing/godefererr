@@ -302,8 +302,6 @@ func checkErrorAssignedInDefer(
 				if !isErrorNameInReturnSignature {
 					pass.Reportf(
 						errorReturnField.Pos(),
-						// TODO: Get the actual signature and set the error
-						// name in front of the error type.
 						"return signature should use named error parameter %s",
 						lhsIdent,
 					)
