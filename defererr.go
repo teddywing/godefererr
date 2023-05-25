@@ -28,17 +28,25 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
+// functionState stores information about functions needed to report problems
+// returning errors from defer.
 type functionState struct {
+	// The end position of the first defer closure.
 	firstErrorDeferEndPos token.Pos
+
+	// Error variable assigned in defer.
 	deferErrorVar         *ast.Ident
 }
 
+// newFunctionState initialises a new functionState.
 func newFunctionState() functionState {
 	return functionState{
 		firstErrorDeferEndPos: -1,
 	}
 }
 
+// setFirstErrorDeferEndPos sets the firstErrorDeferEndPos field of s to pos
+// unless it has already been set.
 func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
 	if s.firstErrorDeferEndPos != -1 {
 		return
@@ -47,10 +55,12 @@ func (s *functionState) setFirstErrorDeferEndPos(pos token.Pos) {
 	s.firstErrorDeferEndPos = pos
 }
 
+// deferAssignsError returns true if the deferErrorVar field of s was assigned.
 func (s *functionState) deferAssignsError() bool {
 	return s.deferErrorVar != nil
 }
 
+// checkFunctions looks at each function and runs defer error checks.
 func checkFunctions(pass *analysis.Pass, node ast.Node) {
 	ast.Inspect(
 		node,
@@ -124,7 +134,8 @@ func checkFunctions(pass *analysis.Pass, node ast.Node) {
 	)
 }
 
-// TODO: doc
+// checkFunctionBody looks for defer statements in a function body and runs
+// error checks.
 func checkFunctionBody(
 	pass *analysis.Pass,
 	funcBody *ast.BlockStmt,
@@ -152,7 +163,8 @@ func checkFunctionBody(
 	)
 }
 
-// TODO: doc
+// checkFunctionReturns checks whether the return statements after a defer
+// closure use the error assigned in the defer.
 func checkFunctionReturns(
 	pass *analysis.Pass,
 	funcBody *ast.BlockStmt,
@@ -206,7 +218,8 @@ func checkFunctionReturns(
 	)
 }
 
-// TODO: doc
+// checkErrorAssignedInDefer checks whether an error value is assigned to a
+// captured variable in a defer closure.
 func checkErrorAssignedInDefer(
 	pass *analysis.Pass,
 	deferFuncLit *ast.FuncLit,
@@ -315,7 +328,8 @@ func checkErrorAssignedInDefer(
 	)
 }
 
-// TODO: doc
+// isVariableDeclaredInsideDeferClosure returns true if the position of
+// variableDecl is between the start and end of deferFuncLit.
 func isVariableDeclaredInsideDeferClosure(
 	deferFuncLit *ast.FuncLit,
 	variableDecl ast.Node,
