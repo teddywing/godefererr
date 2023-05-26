@@ -1,4 +1,30 @@
-// TODO: doc
+// Package defererr defines an Analyzer that checks whether an error set in a
+// defer closure is correctly returned.
+//
+// # Analyzer defererr
+//
+// defererr: report incorrectly returned errors from defer closures.
+//
+// Errors can be returned from a defer closure by setting a captured error
+// variable within the closure. In order for this to work, the error variable
+// must be declared in the function signature, and must be returned somewhere
+// in the function. This analyzer checks to make sure that captured error
+// variables assigned in defer closures are correctly declared and returned.
+//
+// For example:
+//
+//	func returnErrorFromDefer() error { // return signature should be '(err error)'
+//		var err error = nil
+//		if err != nil {
+//			return err
+//		}
+//
+//		defer func() {
+//			err = errors.New("defer error")
+//		}()
+//
+//		return nil // return should use 'err'
+//	}
 package defererr
 
 import (
