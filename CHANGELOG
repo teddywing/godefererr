@@ -1,0 +1,12 @@
+CHANGELOG
+=========
+
+v0.0.2 (2024-03-10):
+	Fixes:
+
+	* Fix segmentation fault under Go >= 1.22.0.
+
+v0.0.1 (2023-05-26):
+	First public release.
+
+ vim:tw=80:comments=:fo+=n:formatlistpat=^\\s*\\*\\s*
