@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+v0.0.3 (2025-04-08):
+	Fixes:
+
+	* Fix error running the analyser command on Go >= 1.24 projects.
+
 v0.0.2 (2024-03-10):
 	Fixes:
 

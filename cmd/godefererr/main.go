@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024  Teddy Wing
+// Copyright (c) 2023–2025  Teddy Wing
 //
 // This file is part of Godefererr.
 //
@@ -24,7 +24,7 @@ import (
 	"gopkg.teddywing.com/defererr"
 )
 
-var version = "0.0.2"
+var version = "0.0.3"
 
 func main() {
 	if len(os.Args) > 1 &&
